@@ -212,24 +212,11 @@ func (m *Map[K, V]) Delete(key K) (ok bool) {
 // Mutated during iteration, mutations will be reflected on return from
 // Iter, but the set of keys visited by Iter is non-deterministic.
 func (m *Map[K, V]) Iter(cb func(k K, v V) (stop bool)) {
-	// take a consistent view of the table in case
-	// we rehash during iteration
-	ctrl, groups := m.ctrl, m.groups
-	// pick a random starting group
-	g := randIntN(len(groups))
-	for n := 0; n < len(groups); n++ {
-		for s, c := range ctrl[g] {
-			if c == empty || c == tombstone {
-				continue
-			}
-			k, v := groups[g].keys[s], groups[g].values[s]
-			if stop := cb(k, v); stop {
-				return
-			}
-		}
-		g++
-		if g >= uint32(len(groups)) {
-			g = 0
+	it := m.Iterator()
+	for it.Next() {
+		k, v := it.Pair()
+		if stop := cb(k, v); stop {
+			return
 		}
 	}
 }
